@@ -1,0 +1,12 @@
+##### Analytics #####
+
+# Python Virtual Environment
+venv
+
+##### Deployment #####
+
+# Kubernetes Secrets
+deployment/secret.yaml
+
+# Postgres
+postgresql-*.tgz
