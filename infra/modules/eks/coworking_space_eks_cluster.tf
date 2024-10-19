@@ -13,6 +13,10 @@ resource "aws_eks_cluster" "coworking_space_eks_cluster" {
 
   version = "1.30"
 
+  access_config {
+    authentication_mode = "API_AND_CONFIG_MAP"
+  }
+
   tags = {
     Name        = "coworking_space_eks_cluster"
     Project     = "coworking_space"
