@@ -17,3 +17,11 @@ module "eks" {
   coworking_space_eks_cluster_role_arn = module.iam.coworking_space_eks_cluster_role_arn
   coworking_space_node_group_role_arn = module.iam.coworking_space_node_group_role_arn
 }
+
+module "secretsmanager" {
+  source = "./modules/secretsmanager"
+}
+
+module "ecr" {
+  source = "./modules/ecr"
+}
