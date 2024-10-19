@@ -1,0 +1,11 @@
+# Python virtual environment
+venv
+
+# Pylint
+.pylintrc
+
+# Python version
+.python-version
+
+# Dockerfile
+Dockerfile
