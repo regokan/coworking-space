@@ -1,0 +1,51 @@
+# Minimum Settings for development
+postgresql:
+  auth:
+    username: localuser
+    password: localpassword
+    postgresPassword: adminpassword
+    database: coworking_db
+
+  primary:
+    initdb:
+      scriptsConfigMap: init-scripts-configmap
+
+    podSecurityContext:
+      enabled: false
+      fsGroup: ""
+      containerSecurityContext:
+        enabled: false
+        runAsUser: "auto"
+
+    readReplicas:
+      podSecurityContext:
+        enabled: false
+        fsGroup: ""
+      containerSecurityContext:
+        enabled: false
+        runAsUser: "auto"
+
+    volumePermissions:
+      enabled: false
+      securityContext:
+        runAsUser: "auto"
+
+    persistence:
+      enabled: false # Disabled persistent volume for development
+
+    service:
+      type: ClusterIP
+      port: 5432
+
+    # PostgreSQL network and access settings
+    networkPolicy:
+      enabled: false # Disabled network policy for development
+
+    # Resources for PostgreSQL (for development, keep resource limits minimal)
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 200m
