@@ -1,0 +1,7 @@
+{
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "python.linting.pylintArgs": [],
+  "python.linting.pylintPath": "${workspaceFolder}/analytics/venv/bin/pylint",
+  "python.pythonPath": "${workspaceFolder}/analytics/venv/bin/python"
+}
