@@ -12,6 +12,13 @@ resource "aws_eks_node_group" "coworking_space_node_group" {
 
   depends_on = [aws_eks_cluster.coworking_space_eks_cluster]
 
+  ami_type = "AL2_ARM_64"
+  capacity_type = "SPOT"
+
+  disk_size = 15
+  force_update_version = true
+  instance_types = ["t4g.small"]
+
   tags = {
     Name        = "coworking_space_node_group"
     Project     = "coworking_space"
