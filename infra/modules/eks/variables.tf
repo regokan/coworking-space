@@ -16,7 +16,7 @@ variable "coworking_space_eks_cluster_role_arn" {
 variable "node_group_desired_size" {
   description = "Desired number of worker nodes"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "node_group_max_size" {
