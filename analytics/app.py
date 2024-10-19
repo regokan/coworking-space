@@ -7,7 +7,7 @@ from flask import jsonify
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from .config import app, db
+from config import app, db
 
 
 port_number = int(os.environ.get("APP_PORT", 5153))
