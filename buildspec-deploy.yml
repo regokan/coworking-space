@@ -1,6 +1,10 @@
 version: 0.2
 
 phases:
+  pre_build:
+    commands:
+      - echo Building Connect to EKS...
+      - make eks-connect
   build:
     commands:
       - echo Deploying Kubernetes ConfigMaps and Services...
