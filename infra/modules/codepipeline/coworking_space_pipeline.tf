@@ -59,6 +59,38 @@ resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
     }
   }
 
+  trigger {
+    provider_type = "CodeStarSourceConnection"
+
+    git_configuration {
+      source_action_name = "Source"
+
+      # Trigger on push events
+      push {
+        branches {
+          includes = ["main"]  # Trigger on pushes to these branches
+        }
+
+        file_paths {
+          includes = ["analytics/*"]  # Trigger only if files in src/ or config/ are changed
+          excludes = ["deployment/*"]       # Exclude changes in the docs/ directory
+        }
+      }
+
+      pull_request {
+        events = ["OPEN"]
+
+        branches {
+          includes = ["feature*"]  # Filter PRs only targeting these branches
+        }
+
+        file_paths {
+          includes = ["analytics/*",]  # Trigger on PRs that change files in these paths
+        }
+      }
+    }
+  }
+
   tags = {
     Name        = "coworking_space_coworking_pipeline"
     Project     = "coworking_space"
