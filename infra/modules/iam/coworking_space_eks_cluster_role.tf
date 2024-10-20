@@ -24,3 +24,8 @@ resource "aws_iam_role_policy_attachment" "coworking_space_eks_role_policy_attac
   role       = aws_iam_role.coworking_space_eks_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
+
+resource "aws_iam_role_policy_attachment" "coworking_space_eks_role_vpc_resource_controller_policy_attachment" {
+  role       = aws_iam_role.coworking_space_eks_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+}
