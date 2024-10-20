@@ -1,6 +1,14 @@
 version: 0.2
 
 phases:
+  install:
+    commands:
+      - echo "Installing Helm v3.16.2..."
+      - wget https://get.helm.sh/helm-v3.16.2-linux-amd64.tar.gz -O helm.tar.gz
+      - tar -xzf helm.tar.gz
+      - chmod +x ./linux-amd64/helm
+      - mv ./linux-amd64/helm /usr/local/bin/helm
+      - helm version
   pre_build:
     commands:
       - echo Building Connect to EKS...
