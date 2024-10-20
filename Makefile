@@ -24,7 +24,11 @@ all: all-prod
 all-prod: build push k8s-prod-apply postgres-install-prod
 
 # All steps for development (build, deploy to local Minikube or other local Kubernetes cluster)
-all-dev: build k8s-dev-apply postgres-install-dev
+all-dev: build-dev k8s-dev-apply postgres-install-dev
+
+# Build Docker image locally
+build-dev:
+	docker build -f $(DOCKERFILE_PATH) -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
 # Build Docker image without BuildKit, using standard caching mechanism
 build:
