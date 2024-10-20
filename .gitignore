@@ -3,6 +3,8 @@
 # Local files
 *.local
 
+.DS_Store
+
 ##### Analytics #####
 
 # Python Virtual Environment
