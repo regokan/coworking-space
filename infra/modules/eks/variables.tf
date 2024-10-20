@@ -13,6 +13,16 @@ variable "coworking_space_eks_cluster_role_arn" {
   type        = string
 }
 
+variable "coworking_space_eks_role_policy_attachment" {
+  description = "Coworking Space EKS role policy attachment"
+  type        = string
+}
+
+variable "coworking_space_eks_role_vpc_resource_controller_policy_attachment" {
+  description = "Coworking Space EKS role VPC resource controller policy attachment"
+  type        = string
+}
+
 variable "node_group_desired_size" {
   description = "Desired number of worker nodes"
   type        = number

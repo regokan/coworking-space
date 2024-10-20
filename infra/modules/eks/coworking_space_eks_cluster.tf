@@ -14,8 +14,14 @@ resource "aws_eks_cluster" "coworking_space_eks_cluster" {
   version = "1.30"
 
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
+    authentication_mode = "CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
   }
+
+  depends_on = [ 
+    var.coworking_space_eks_role_vpc_resource_controller_policy_attachment,
+    var.coworking_space_eks_role_policy_attachment
+   ]
 
   tags = {
     Name        = "coworking_space_eks_cluster"
