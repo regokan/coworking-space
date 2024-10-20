@@ -1,6 +1,6 @@
 # IAM Role for CodePipeline
 resource "aws_iam_role" "coworking_space_codepipeline_role" {
-  name = "coworking_space_codepipeline_role"
+  name               = "coworking_space_codepipeline_role"
   assume_role_policy = data.aws_iam_policy_document.coworking_space_pipeline_assume_role_policy.json
 
   tags = {
@@ -40,8 +40,8 @@ data "aws_iam_policy_document" "coworking_space_pipeline_s3_policy" {
       "s3:GetBucketLocation",
     ]
     resources = [
-      "${var.coworking_space_codepipeline_bucket_arn}",                    # Granting access to list the bucket itself
-      "${var.coworking_space_codepipeline_bucket_arn}/*",                  # Granting access to objects inside the bucket
+      "${var.coworking_space_codepipeline_bucket_arn}",   # Granting access to list the bucket itself
+      "${var.coworking_space_codepipeline_bucket_arn}/*", # Granting access to objects inside the bucket
     ]
   }
 }
@@ -68,13 +68,13 @@ data "aws_iam_policy_document" "coworking_space_pipeline_access_policy" {
 resource "aws_iam_policy" "codestar_connections_policy" {
   name        = "coworking_space_codestar_connections_policy"
   description = "Allow CodePipeline to use CodeStar connection for GitHub"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "codestar-connections:UseConnection"
         ]
         Resource = ["*"]

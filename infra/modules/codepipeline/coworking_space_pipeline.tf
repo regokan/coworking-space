@@ -1,6 +1,6 @@
 resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
-  name     = "coworking_space_coworking_pipeline"
-  role_arn = var.coworking_space_codepipeline_role_arn
+  name          = "coworking_space_coworking_pipeline"
+  role_arn      = var.coworking_space_codepipeline_role_arn
   pipeline_type = "V2"
 
   artifact_store {
@@ -11,17 +11,17 @@ resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
   stage {
     name = "Source"
     action {
-      name            = "Source"
-      category        = "Source"
+      name             = "Source"
+      category         = "Source"
       owner            = "AWS"
       provider         = "CodeStarSourceConnection"
       version          = "1"
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn =  var.github_connection_arn
+        ConnectionArn    = var.github_connection_arn
         FullRepositoryId = "regokan/coworking-space"
-        BranchName     = "main"
+        BranchName       = "main"
       }
     }
   }
@@ -29,12 +29,12 @@ resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
   stage {
     name = "Build"
     action {
-      name            = "Build"
-      category        = "Build"
-      owner           = "AWS"
-      provider        = "CodeBuild"
-      version         = "1"
-      input_artifacts = ["source_output"]
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["source_output"]
       output_artifacts = ["build_output"]
 
       configuration = {
@@ -68,12 +68,12 @@ resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
       # Trigger on push events
       push {
         branches {
-          includes = ["main"]  # Trigger on pushes to these branches
+          includes = ["main"] # Trigger on pushes to these branches
         }
 
         file_paths {
           includes = ["analytics/*"]  # Trigger only if files in src/ or config/ are changed
-          excludes = ["deployment/*"]       # Exclude changes in the docs/ directory
+          excludes = ["deployment/*"] # Exclude changes in the docs/ directory
         }
       }
 
@@ -81,11 +81,11 @@ resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
         events = ["OPEN"]
 
         branches {
-          includes = ["feature*"]  # Filter PRs only targeting these branches
+          includes = ["feature*"] # Filter PRs only targeting these branches
         }
 
         file_paths {
-          includes = ["analytics/*",]  # Trigger on PRs that change files in these paths
+          includes = ["analytics/*", ] # Trigger on PRs that change files in these paths
         }
       }
     }

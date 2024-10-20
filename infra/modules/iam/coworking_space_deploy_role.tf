@@ -1,6 +1,6 @@
 # IAM Role for CodeBuild
 resource "aws_iam_role" "coworking_space_codebuild_deploy_role" {
-  name = "coworking_space_codebuild_deploy_role"
+  name               = "coworking_space_codebuild_deploy_role"
   assume_role_policy = data.aws_iam_policy_document.coworking_space_deploy_assume_role_policy.json
 
   tags = {
@@ -50,8 +50,8 @@ data "aws_iam_policy_document" "coworking_space_deploy_access_policy" {
       "s3:ListBucket"
     ]
     resources = [
-      var.coworking_space_codepipeline_bucket_arn,                  # Granting access to list the bucket itself
-      "${var.coworking_space_codepipeline_bucket_arn}/*"            # Granting access to objects inside the bucket
+      var.coworking_space_codepipeline_bucket_arn,       # Granting access to list the bucket itself
+      "${var.coworking_space_codepipeline_bucket_arn}/*" # Granting access to objects inside the bucket
     ]
   }
 }
