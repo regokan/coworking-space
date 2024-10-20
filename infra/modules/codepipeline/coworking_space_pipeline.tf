@@ -1,6 +1,7 @@
 resource "aws_codepipeline" "coworking_space_coworking_pipeline" {
   name     = "coworking_space_coworking_pipeline"
   role_arn = var.coworking_space_codepipeline_role_arn
+  pipeline_type = "V2"
 
   artifact_store {
     location = var.coworking_space_codepipeline_bucket
