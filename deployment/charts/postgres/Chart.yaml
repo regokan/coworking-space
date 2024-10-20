@@ -1,0 +1,10 @@
+apiVersion: v2
+name: coworking-postgres
+description: A Helm chart to deploy PostgreSQL for the coworking app
+version: 1.0.0
+
+# Declare dependencies
+dependencies:
+  - name: postgresql
+    version: 16.0.3
+    repository: https://charts.bitnami.com/bitnami

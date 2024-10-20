@@ -1,0 +1,79 @@
+# Production Settings for PostgreSQL
+postgresql:
+  auth:
+    existingSecret: postgres-secret
+    secretKeys:
+      adminPasswordKey: postgresPassword
+      userPasswordKey: password
+    username: productionuser
+    database: coworking_db_prod
+
+  primary:
+    initdb:
+      scriptsConfigMap: init-scripts-configmap
+
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001 # Non-root group ID
+      containerSecurityContext:
+        enabled: true
+        runAsUser: 1001 # Non-root user ID for security purposes
+
+    readReplicas:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 1001 # Ensure read replicas also run with a non-root group
+      containerSecurityContext:
+        enabled: true
+        runAsUser: 1001 # Non-root user for read replicas
+
+    volumePermissions:
+      enabled: true
+      securityContext:
+        runAsUser: 1001 # Ensure proper permissions for volume mounts
+
+    persistence:
+      enabled: true
+      storageClass: "gp2" # Use gp2 storage class (or customize based on your setup)
+      size: 10Gi # Persistent storage for production use
+      accessModes:
+        - ReadWriteOnce # Only one pod can write at a time
+      mountPath: /bitnami/postgresql
+
+    service:
+      type: ClusterIP
+      port: 5432
+
+    networkPolicy:
+      enabled: true
+      allowExternal: false # Only allow internal traffic
+
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+      successThreshold: 1
+
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+      successThreshold: 1
+
+  readReplicas:
+    replicaCount: 1
+
+metrics:
+  enabled: false
