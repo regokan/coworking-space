@@ -3,21 +3,16 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo Installing/Updating AWS CLI...
-      - if ! command -v aws &> /dev/null; then
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install;
-        else
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install --update;
-        fi
-      - echo Installing Docker...
-      - if ! command -v docker &> /dev/null; then
-        yum update -y && amazon-linux-extras install docker && service docker start && sudo usermod -a -G docker $USER;
-        else
-        echo "Docker already installed";
-        fi
-      - echo Verifying Docker installation...
+      - echo "Using pre-installed AWS CLI"
+      - aws --version
+      - echo "Installing Docker..."
+      - yum update -y
+      - amazon-linux-extras install docker
+      - service docker start
+      - sudo usermod -a -G docker $USER
+      - echo "Verifying Docker installation..."
       - docker --version
-      - echo Logging in to Amazon ECR...
+      - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 
   pre_build:
