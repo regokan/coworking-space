@@ -2,6 +2,7 @@
 ACCOUNT_ID = $(shell aws sts get-caller-identity --query "Account" --output text)
 IMAGE_NAME=coworking_app
 IMAGE_TAG=latest
+CACHE_TAG = cache
 DOCKERFILE_PATH=./analytics/Dockerfile
 K8S_LOCAL_DEPLOYMENT=./deployment-local
 K8S_PRODUCTION_DEPLOYMENT=./deployment
@@ -25,18 +26,31 @@ all-prod: build push k8s-prod-apply postgres-install-prod
 # All steps for development (build, deploy to local Minikube or other local Kubernetes cluster)
 all-dev: build k8s-dev-apply postgres-install-dev
 
-# Build Docker image
+# Build Docker image without BuildKit, using standard caching mechanism
 build:
-	docker build -f $(DOCKERFILE_PATH) -t $(IMAGE_NAME):$(IMAGE_TAG) .
+	# Authenticate Docker to the Amazon ECR registry
+	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
+	# Pull the cache image from ECR if it exists
+	docker pull $(ECR_REPOSITORY_URI):$(CACHE_TAG) || true
+	# Build the image using the cache
+	docker build \
+	--cache-from=$(ECR_REPOSITORY_URI):$(CACHE_TAG) \
+	-f $(DOCKERFILE_PATH) \
+	-t $(IMAGE_NAME):$(IMAGE_TAG) .
 
-# Push Docker image to Amazon ECR (for production)
+
+# Push both the final image and the cache image to Amazon ECR
 push:
 	# Authenticate Docker to the Amazon ECR registry
 	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
-	# Tag the image
+	# Tag the image with the final tag (e.g., latest)
 	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(ECR_REPOSITORY_URI):$(IMAGE_TAG)
-	# Push the image to ECR
+	# Tag the image with the cache tag
+	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(ECR_REPOSITORY_URI):$(CACHE_TAG)
+	# Push the final image
 	docker push $(ECR_REPOSITORY_URI):$(IMAGE_TAG)
+	# Push the cache image (so it can be reused in future builds)
+	docker push $(ECR_REPOSITORY_URI):$(CACHE_TAG)
 
 # Run Docker container locally for testing (development mode)
 run:
