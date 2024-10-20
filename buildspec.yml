@@ -3,15 +3,6 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo "Using pre-installed AWS CLI"
-      - aws --version
-      - echo "Installing Docker..."
-      - yum update -y
-      - amazon-linux-extras install docker
-      - service docker start
-      - sudo usermod -a -G docker $USER
-      - echo "Verifying Docker installation..."
-      - docker --version
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 
