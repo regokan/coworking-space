@@ -82,6 +82,7 @@ k8s-prod-apply: eks-connect
 	export DB_PASSWORD=$(shell aws secretsmanager get-secret-value --secret-id coworking_space_db_credentials --query 'SecretString' --output text | jq -r '.password'); \
 	export ECR_REPOSITORY_URI=$(ECR_REPOSITORY_URI) DOCKER_IMAGE_NAME=$(IMAGE_NAME) IMAGE_TAG=$(IMAGE_TAG); \
 	envsubst < $(K8S_PRODUCTION_DEPLOYMENT)/coworking.yaml | kubectl apply -f -
+	kubectl rollout restart deployment coworking -n coworking || true
 
 # Delete Kubernetes production deployment from EKS
 k8s-prod-delete: eks-connect
