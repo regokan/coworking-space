@@ -1,131 +1,332 @@
 # Coworking Space Service Extension
-The Coworking Space Service is a set of APIs that enables users to request one-time tokens and administrators to authorize access to a coworking space. This service follows a microservice pattern and the APIs are split into distinct services that can be deployed and managed independently of one another.
 
-For this project, you are a DevOps engineer who will be collaborating with a team that is building an API for business analysts. The API provides business analysts basic analytics data on user activity in the service. The application they provide you functions as expected locally and you are expected to help build a pipeline to deploy it in Kubernetes.
+The Coworking Space Service is a set of APIs that enable users to request one-time tokens and administrators to authorize access to a coworking space. This service follows a microservice pattern, with APIs split into distinct services that can be deployed and managed independently.
 
-## Getting Started
+This project focuses on building a production-ready version of the analytics application, which provides business analysts with essential analytics data on user activity within the service.
 
-### Dependencies
-#### Local Environment
-1. Python Environment - run Python 3.6+ applications and install Python dependencies via `pip`
-2. Docker CLI - build and run Docker images locally
-3. `kubectl` - run commands against a Kubernetes cluster
-4. `helm` - apply Helm Charts to a Kubernetes cluster
+## Table of Contents
 
-#### Remote Resources
-1. AWS CodeBuild - build Docker images remotely
-2. AWS ECR - host Docker images
-3. Kubernetes Environment with AWS EKS - run applications in k8s
-4. AWS CloudWatch - monitor activity and logs in EKS
-5. GitHub - pull and clone code
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Setup and Installation](#setup-and-installation)
+  - [1. Configure the Database](#1-configure-the-database)
+  - [2. Running the Analytics Application Locally](#2-running-the-analytics-application-locally)
+- [Deployment](#deployment)
+  - [Local Development](#local-development)
+  - [Production Deployment](#production-deployment)
+- [Continuous Integration and Deployment Pipeline](#continuous-integration-and-deployment-pipeline)
+  - [AWS Authentication (`aws-auth`)](#aws-authentication-aws-auth)
+- [Monitoring and Logging](#monitoring-and-logging)
+- [Cost Optimization](#cost-optimization)
+- [Contributing](#contributing)
+- [License](#license)
 
-### Setup
-#### 1. Configure a Database
-Set up a Postgres database using a Helm Chart.
+## Overview
 
-1. Set up Bitnami Repo
+This project aims to deploy the analytics application to both local and production environments using Kubernetes and AWS services. The deployment process includes building Docker images, pushing them to AWS ECR (for production), and deploying them to Kubernetes clusters. AWS CodePipeline and CodeBuild are used for continuous integration and deployment in the production environment.
+
+## Prerequisites
+
+### Local Environment
+
+- **Python 3.6+**: To run the application and manage dependencies.
+- **Docker CLI**: To build and run Docker images locally.
+- **kubectl**: To interact with Kubernetes clusters.
+- **Helm**: To manage Kubernetes applications.
+- **AWS CLI**: To interact with AWS services.
+- **Make**: To automate tasks using the provided Makefile.
+- **Minikube** or **Kind**: To run a local Kubernetes cluster for development.
+
+### Remote Resources
+
+- **AWS Account**: To access AWS services like ECR, EKS, CodeBuild, CodePipeline, and CloudWatch.
+- **AWS IAM Permissions**: Proper IAM roles and permissions to manage AWS resources.
+- **GitHub Repository**: For source code management and integration with AWS CodePipeline.
+
+## Setup and Installation
+
+### 1. Configure the Database
+
+We use a PostgreSQL database deployed via a Helm chart.
+
+#### a. Add the Bitnami Repository
+
 ```bash
-helm repo add <REPO_NAME> https://charts.bitnami.com/bitnami
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
 ```
 
-2. Install PostgreSQL Helm Chart
-```
-helm install <SERVICE_NAME> <REPO_NAME>/postgresql
-```
+#### b. Install PostgreSQL Helm Chart
 
-This should set up a Postgre deployment at `<SERVICE_NAME>-postgresql.default.svc.cluster.local` in your Kubernetes cluster. You can verify it by running `kubectl svc`
-
-By default, it will create a username `postgres`. The password can be retrieved with the following command:
 ```bash
-export POSTGRES_PASSWORD=$(kubectl get secret --namespace default <SERVICE_NAME>-postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
+helm install coworking-postgres bitnami/postgresql --namespace coworking --create-namespace
+```
 
+This command installs PostgreSQL in the `coworking` namespace.
+
+#### c. Retrieve Database Credentials
+
+```bash
+export POSTGRES_PASSWORD=$(kubectl get secret --namespace coworking coworking-postgres-postgresql -o jsonpath="{.data.postgres-password}" | base64 --decode)
 echo $POSTGRES_PASSWORD
 ```
 
-<sup><sub>* The instructions are adapted from [Bitnami's PostgreSQL Helm Chart](https://artifacthub.io/packages/helm/bitnami/postgresql).</sub></sup>
+#### d. Run Seed Files
 
-3. Test Database Connection
-The database is accessible within the cluster. This means that when you will have some issues connecting to it via your local environment. You can either connect to a pod that has access to the cluster _or_ connect remotely via [`Port Forwarding`](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
-
-* Connecting Via Port Forwarding
-```bash
-kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
-    PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432
-```
-
-* Connecting Via a Pod
-```bash
-kubectl exec -it <POD_NAME> bash
-PGPASSWORD="<PASSWORD HERE>" psql postgres://postgres@<SERVICE_NAME>:5432/postgres -c <COMMAND_HERE>
-```
-
-4. Run Seed Files
-We will need to run the seed files in `db/` in order to create the tables and populate them with data.
+Port-forward the PostgreSQL service to your local machine and run the seed SQL files:
 
 ```bash
-kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
-    PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432 < <FILE_NAME.sql>
+kubectl port-forward --namespace coworking svc/coworking-postgres-postgresql 5432:5432 &
+PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432 < db/seed.sql
 ```
 
 ### 2. Running the Analytics Application Locally
-In the `analytics/` directory:
 
-1. Install dependencies
+#### a. Install Dependencies
+
+Navigate to the `analytics` directory and install the required Python packages:
+
 ```bash
+cd analytics
 pip install -r requirements.txt
 ```
-2. Run the application (see below regarding environment variables)
+
+#### b. Set Environment Variables
+
+Create a `.env` file or export the following variables:
+
 ```bash
-<ENV_VARS> python app.py
+export DB_USERNAME=postgres
+export DB_PASSWORD=<YOUR_POSTGRES_PASSWORD>
+export DB_HOST=127.0.0.1
+export DB_PORT=5432
+export DB_NAME=postgres
 ```
 
-There are multiple ways to set environment variables in a command. They can be set per session by running `export KEY=VAL` in the command line or they can be prepended into your command.
+#### c. Run the Application
 
-* `DB_USERNAME`
-* `DB_PASSWORD`
-* `DB_HOST` (defaults to `127.0.0.1`)
-* `DB_PORT` (defaults to `5432`)
-* `DB_NAME` (defaults to `postgres`)
+Start the application using Python:
 
-If we set the environment variables by prepending them, it would look like the following:
 ```bash
-DB_USERNAME=username_here DB_PASSWORD=password_here python app.py
+python app.py
 ```
-The benefit here is that it's explicitly set. However, note that the `DB_PASSWORD` value is now recorded in the session's history in plaintext. There are several ways to work around this including setting environment variables in a file and sourcing them in a terminal session.
 
-3. Verifying The Application
-* Generate report for check-ins grouped by dates
-`curl <BASE_URL>/api/reports/daily_usage`
+#### d. Verify the Application
 
-* Generate report for check-ins grouped by users
-`curl <BASE_URL>/api/reports/user_visits`
+- **Daily Usage Report**
 
-## Project Instructions
-1. Set up a Postgres database with a Helm Chart
-2. Create a `Dockerfile` for the Python application. Use a base image that is Python-based.
-3. Write a simple build pipeline with AWS CodeBuild to build and push a Docker image into AWS ECR
-4. Create a service and deployment using Kubernetes configuration files to deploy the application
-5. Check AWS CloudWatch for application logs
+  ```bash
+  curl http://127.0.0.1:5153/api/reports/daily_usage
+  ```
 
-### Deliverables
-1. `Dockerfile`
-2. Screenshot of AWS CodeBuild pipeline
-3. Screenshot of AWS ECR repository for the application's repository
-4. Screenshot of `kubectl get svc`
-5. Screenshot of `kubectl get pods`
-6. Screenshot of `kubectl describe svc <DATABASE_SERVICE_NAME>`
-7. Screenshot of `kubectl describe deployment <SERVICE_NAME>`
-8. All Kubernetes config files used for deployment (ie YAML files)
-9. Screenshot of AWS CloudWatch logs for the application
-10. `README.md` file in your solution that serves as documentation for your user to detail how your deployment process works and how the user can deploy changes. The details should not simply rehash what you have done on a step by step basis. Instead, it should help an experienced software developer understand the technologies and tools in the build and deploy process as well as provide them insight into how they would release new builds.
+- **User Visits Report**
 
+  ```bash
+  curl http://127.0.0.1:5153/api/reports/user_visits
+  ```
 
-### Stand Out Suggestions
-Please provide up to 3 sentences for each suggestion. Additional content in your submission from the standout suggestions do _not_ impact the length of your total submission.
-1. Specify reasonable Memory and CPU allocation in the Kubernetes deployment configuration
-2. In your README, specify what AWS instance type would be best used for the application? Why?
-3. In your README, provide your thoughts on how we can save on costs?
+## Deployment
 
-### Best Practices
-* Dockerfile uses an appropriate base image for the application being deployed. Complex commands in the Dockerfile include a comment describing what it is doing.
-* The Docker images use semantic versioning with three numbers separated by dots, e.g. `1.2.1` and  versioning is visible in the  screenshot. See [Semantic Versioning](https://semver.org/) for more details.
+### Local Development
+
+For local development, you can use a local Kubernetes cluster like Minikube or Kind. The provided Makefile includes commands to automate the deployment to your local cluster.
+
+#### a. Start Minikube
+
+```bash
+minikube start --driver=docker
+```
+
+#### b. Build the Docker Image Locally
+
+```bash
+make build-dev
+```
+
+This command builds the Docker image using the local Docker daemon.
+
+#### c. Deploy to Local Kubernetes Cluster
+
+```bash
+make k8s-dev-apply
+```
+
+This command applies the Kubernetes manifests for local development, deploying the application to your local cluster.
+
+#### d. Install PostgreSQL in Local Kubernetes Cluster
+
+```bash
+make postgres-install-dev
+```
+
+This command installs PostgreSQL using Helm in your local cluster.
+
+### Production Deployment
+
+The production deployment uses AWS services such as ECR, EKS, CodeBuild, and CodePipeline.
+
+#### a. Build and Push Docker Image to ECR
+
+- **Authenticate Docker to Amazon ECR**
+
+  Ensure you have authenticated your Docker CLI to your Amazon ECR registry:
+
+  ```bash
+  aws ecr get-login-password --region <your-region> | docker login --username AWS --password-stdin <your-account-id>.dkr.ecr.<your-region>.amazonaws.com
+  ```
+
+- **Build the Docker Image**
+
+  ```bash
+  make build
+  ```
+
+- **Push the Docker Image to ECR**
+
+  ```bash
+  make push
+  ```
+
+#### b. Deploy to Kubernetes (Production)
+
+- **Connect to EKS Cluster**
+
+  ```bash
+  make eks-connect
+  ```
+
+- **Deploy PostgreSQL and Application**
+
+  ```bash
+  make postgres-install-prod
+  make k8s-prod-apply
+  ```
+
+These commands will install PostgreSQL using Helm and deploy the application to your EKS cluster.
+
+## Continuous Integration and Deployment Pipeline
+
+An AWS CodePipeline is set up to automate the build and deployment process whenever changes are pushed to the `main` branch in the GitHub repository.
+
+### a. Pipeline Structure
+
+1. **Source Stage**: Retrieves code from GitHub using AWS CodeStar Connections.
+2. **Build Stage**: Builds the Docker image using AWS CodeBuild.
+3. **Deploy Stage**: Deploys the application to EKS using AWS CodeBuild.
+
+### b. AWS Authentication (`aws-auth`)
+
+To allow AWS CodeBuild to deploy resources to the EKS cluster, the IAM role used by CodeBuild (`coworking_space_codebuild_deploy_role`) must be added to the `aws-auth` ConfigMap in your EKS cluster.
+
+#### Updating `aws-auth` ConfigMap
+
+1. **Edit the ConfigMap**
+
+   ```bash
+   kubectl edit configmap aws-auth -n kube-system
+   ```
+
+2. **Add the Following Entry Under `mapRoles`**
+
+   ```yaml
+   - rolearn: arn:aws:iam::<YOUR_ACCOUNT_ID>:role/coworking_space_codebuild_deploy_role
+     username: codebuild:deploy
+     groups:
+       - system:masters
+   ```
+
+This grants the CodeBuild role administrative access to the cluster, enabling it to perform deployments successfully.
+
+**Note**: Granting `system:masters` access provides full admin privileges. For a more secure setup, consider creating a custom role with only the necessary permissions.
+
+## Monitoring and Logging
+
+AWS CloudWatch is used for monitoring logs and application performance:
+
+- **CloudWatch Logs**: Captures logs from the application running in EKS.
+- **CloudWatch Metrics**: Monitors CPU, memory usage, and other performance metrics.
+
+Ensure that your application outputs logs to `stdout` and `stderr` so that they can be captured by CloudWatch.
+
+## Cost Optimization
+
+To save on costs:
+
+- **Choose Appropriate EC2 Instances**: Use smaller instance types like `t3.small` for development and `t3.medium` for production workloads.
+- **Autoscaling**: Implement cluster autoscaling to adjust resources based on demand.
+- **Resource Requests and Limits**: Define reasonable CPU and memory requests and limits in your Kubernetes manifests to optimize resource utilization.
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and create a pull request with your changes.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+**Note**: For detailed instructions and advanced configurations, refer to the project documentation or contact the project maintainers.
+
+---
+
+## Makefile Overview
+
+The provided Makefile automates various tasks for both local development and production deployment. Below is an overview of the key targets and their purposes.
+
+### Local Development Targets
+
+- **`build-dev`**: Builds the Docker image locally without pushing to any registry.
+
+  ```make
+  build-dev:
+      docker build -f $(DOCKERFILE_PATH) -t $(IMAGE_NAME):$(IMAGE_TAG) .
+  ```
+
+- **`k8s-dev-apply`**: Deploys the application to your local Kubernetes cluster using the manifests in the `deployment-local` directory.
+
+- **`postgres-install-dev`**: Installs PostgreSQL in your local Kubernetes cluster using Helm and the charts in `deployment-local/charts/postgres`.
+
+- **`all-dev`**: Runs all the necessary steps for local development, including building the Docker image, deploying PostgreSQL, and deploying the application.
+
+### Production Deployment Targets
+
+- **`build`**: Builds the Docker image and tags it appropriately for pushing to AWS ECR.
+
+- **`push`**: Pushes the Docker image to AWS ECR, including both the latest image and a cache image for future builds.
+
+- **`eks-connect`**: Configures your `kubectl` context to connect to the EKS cluster.
+
+- **`k8s-prod-apply`**: Deploys the application to the EKS cluster using the manifests in the `deployment` directory.
+
+- **`postgres-install-prod`**: Installs PostgreSQL in the EKS cluster using Helm and the charts in `deployment/charts/postgres`.
+
+- **`all-prod`**: Runs all the necessary steps for production deployment, including building and pushing the Docker image, deploying PostgreSQL, and deploying the application.
+
+### Utility Targets
+
+- **`clean-up`**: Deletes all resources in the `coworking` namespace, including deployments, services, pods, secrets, and configmaps.
+
+- **`start-minikube`** and **`stop-minikube`**: Starts and stops Minikube for local Kubernetes development.
+
+- **`install-*`**: Targets like `install-helm-mac`, `install-aws-cli-mac`, etc., provide commands to install necessary tools on macOS.
+
+### Usage
+
+To execute any of these targets, use the `make` command followed by the target name. For example:
+
+- Local development:
+
+  ```bash
+  make all-dev
+  ```
+
+- Production deployment:
+
+  ```bash
+  make all-prod
+  ```
+
+---
+
+**Important**: Before running any of the commands, ensure that you have the necessary AWS permissions and that all variables in the Makefile are correctly set for your environment.
