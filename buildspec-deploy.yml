@@ -1,0 +1,41 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      kubectl: 1.21
+    commands:
+      - echo Installing AWS CLI...
+      - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      - unzip awscliv2.zip
+      - sudo ./aws/install
+      - echo Installing kubectl...
+      - curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.5/2021-11-02/bin/linux/amd64/kubectl
+      - chmod +x ./kubectl
+      - mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+      - echo Installing jq for parsing JSON...
+      - yum -y install jq
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+      - echo Authenticating to EKS cluster...
+      - aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER_NAME
+      - echo EKS Authentication complete.
+
+  build:
+    commands:
+      - echo Deploying Kubernetes ConfigMaps and Services...
+      - kubectl apply -f $K8S_PRODUCTION_DEPLOYMENT/namespace.yaml || true
+      - kubectl apply -f $K8S_PRODUCTION_DEPLOYMENT/configmap.yaml
+      - echo Fetching database credentials from AWS Secrets Manager...
+      - export DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id coworking_space_db_credentials --query 'SecretString' --output text | jq -r '.username')
+      - export DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id coworking_space_db_credentials --query 'SecretString' --output text | jq -r '.password')
+      - echo Deploying coworking application to EKS...
+      - export DOCKER_IMAGE_NAME=$IMAGE_NAME IMAGE_TAG=$IMAGE_TAG; envsubst < $K8S_PRODUCTION_DEPLOYMENT/coworking.yaml | kubectl apply -f -
+
+artifacts:
+  files:
+    - "**/*"
+  discard-paths: yes
