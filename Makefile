@@ -148,3 +148,12 @@ install-docker-mac:
 # Install kubectl
 install-kubectl-mac:
 	brew install kubectl
+
+# Clean up all resources
+clean-up:
+	kubectl delete deployment --all -n coworking
+	kubectl delete svc --all -n coworking
+	kubectl delete pod --all -n coworking
+	kubectl delete secret --all -n coworking
+	kubectl delete configmap --all -n coworking
+	kubectl delete namespace coworking
