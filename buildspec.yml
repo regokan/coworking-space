@@ -1,0 +1,20 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 19
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+  pre_build:
+    commands:
+      - echo Building Docker image...
+      - make build
+  build:
+    commands:
+      - echo Pushing Docker image to ECR...
+      - make push
+artifacts:
+  files:
+    - "**/*"
