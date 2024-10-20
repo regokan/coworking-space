@@ -4,7 +4,7 @@ metadata:
   name: coworking
   namespace: coworking
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     service: coworking
   ports:
