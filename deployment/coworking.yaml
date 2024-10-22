@@ -33,7 +33,7 @@ spec:
       containers:
         - name: coworking
           image: ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           livenessProbe:
             httpGet:
               path: /health_check
