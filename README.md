@@ -216,7 +216,45 @@ An AWS CodePipeline is set up to automate the build and deployment process whene
 
 ### b. AWS Authentication (`aws-auth`)
 
-To allow AWS CodeBuild to deploy resources to the EKS cluster, the IAM role used by CodeBuild (`coworking_space_codebuild_deploy_role`) must be added to the `aws-auth` ConfigMap in your EKS cluster.
+To enable AWS CodeBuild to deploy resources to the EKS cluster, the IAM role used by CodeBuild (`coworking_space_codebuild_deploy_role`) must be added to the `aws-auth` ConfigMap within your EKS cluster. This step grants the necessary permissions for CodeBuild to interact with Kubernetes resources.
+
+#### Steps to Update `aws-auth` ConfigMap:
+
+1. **Retrieve the current `aws-auth` ConfigMap:**
+   Use `kubectl` to fetch the existing `aws-auth` ConfigMap, which manages the mapping of IAM roles to Kubernetes roles.
+
+   ```bash
+   kubectl edit configmap aws-auth -n kube-system
+   ```
+
+2. **Add the CodeBuild IAM Role:**
+   In the `mapRoles` section of the ConfigMap, add a new entry for the `coworking_space_codebuild_deploy_role` IAM role. This role should be assigned to the `system:masters` group, granting it full administrative access to the cluster.
+
+   ```yaml
+   apiVersion: v1
+   data:
+     mapRoles: |
+       - rolearn: arn:aws:iam::<your-aws-account-id>:role/coworking_space_codebuild_deploy_role
+         username: codedeploy
+         groups:
+         - system:masters
+   ```
+
+   - **rolearn**: The ARN of the `coworking_space_codebuild_deploy_role` that CodeBuild uses.
+   - **username**: A descriptive username, e.g., `codedeploy`.
+   - **groups**: The `system:masters` group grants full admin privileges in Kubernetes, allowing CodeBuild to manage cluster resources such as ConfigMaps, Services, and Deployments.
+
+3. **Save the Changes:**
+   Once the role has been added, save and close the editor. This will apply the updated ConfigMap to the EKS cluster.
+
+4. **Verify the Configuration:**
+   After the update, you can verify that the `aws-auth` ConfigMap has been successfully modified:
+
+   ```bash
+   kubectl get configmap aws-auth -n kube-system -o yaml
+   ```
+
+By completing this step, CodeBuild will be able to authenticate with the EKS cluster and execute `kubectl` commands to manage resources during deployments.
 
 #### Updating `aws-auth` ConfigMap
 
