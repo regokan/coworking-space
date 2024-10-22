@@ -33,10 +33,10 @@ build-dev:
 
 build-push:
 	# Authenticate Docker to the Amazon ECR registry
-	# aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
+	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
 	
 	# Ensure Buildx builder exists
-	# docker buildx create --name multi-arch-builder --use || true
+	docker buildx create --name multi-arch-builder --use || true
 	# Set the builder to support both arm64 and amd64
 	docker buildx use multi-arch-builder
 
