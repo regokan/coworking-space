@@ -1,15 +1,10 @@
 version: 0.2
 
 phases:
-  pre_build:
-    commands:
-      - echo Building Docker image...
-      - make build
-
   build:
     commands:
-      - echo Pushing Docker image to ECR...
-      - make push
+      - echo Building and Pushing Docker image to ECR...
+      - make build-push
 
 artifacts:
   files:

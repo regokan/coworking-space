@@ -6,7 +6,8 @@ CACHE_TAG = cache
 DOCKERFILE_PATH=./analytics/Dockerfile
 K8S_LOCAL_DEPLOYMENT=./deployment-local
 K8S_PRODUCTION_DEPLOYMENT=./deployment
-ECR_REPOSITORY_URI = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com/coworking_space_api
+ECR_URI = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
+ECR_REPOSITORY_URI = $(ECR_URI)/coworking_space_api
 EKS_CLUSTER_NAME=coworking_space_eks_cluster
 REGION=us-east-1
 HELM_CHART_PATH_LOCAL=./deployment-local/charts/postgres
@@ -15,13 +16,13 @@ HELM_CHART_PATH_PROD=./deployment/charts/postgres
 HELM_CHART_VALUES_PROD=./deployment/charts/postgres/values.yaml
 
 # Phony targets
-.PHONY: all-dev all-prod build push run k8s-dev-apply k8s-dev-delete k8s-prod-apply k8s-prod-delete
+.PHONY: all-dev all-prod build-push run k8s-dev-apply k8s-dev-delete k8s-prod-apply k8s-prod-delete
 
 # Default "all" for production - runs all production steps
 all: all-prod
 
 # All steps for production (build, push, deploy to EKS)
-all-prod: build push k8s-prod-apply postgres-install-prod
+all-prod: build-push k8s-prod-apply postgres-install-prod
 
 # All steps for development (build, deploy to local Minikube or other local Kubernetes cluster)
 all-dev: build-dev k8s-dev-apply postgres-install-dev
@@ -30,31 +31,25 @@ all-dev: build-dev k8s-dev-apply postgres-install-dev
 build-dev:
 	docker build -f $(DOCKERFILE_PATH) -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
-# Build Docker image without BuildKit, using standard caching mechanism
-build:
+build-push:
 	# Authenticate Docker to the Amazon ECR registry
-	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
-	# Pull the cache image from ECR if it exists
-	docker pull $(ECR_REPOSITORY_URI):$(CACHE_TAG) || true
-	# Build the image using the cache
-	docker build \
-	--cache-from=$(ECR_REPOSITORY_URI):$(CACHE_TAG) \
+	# aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
+	
+	# Ensure Buildx builder exists
+	# docker buildx create --name multi-arch-builder --use || true
+	# Set the builder to support both arm64 and amd64
+	docker buildx use multi-arch-builder
+
+	# Build the image for multiple platforms (amd64 and arm64), use cache from ECR, and push the image
+	docker buildx build \
+	--platform linux/amd64,linux/arm64 \
+	--cache-to type=registry,ref=$(ECR_REPOSITORY_URI):$(CACHE_TAG),mode=max,image-manifest=true,oci-mediatypes=true \
+	--cache-from mode=max,image-manifest=true,oci-mediatypes=true,type=registry,ref=$(ECR_REPOSITORY_URI):$(CACHE_TAG) \
 	-f $(DOCKERFILE_PATH) \
-	-t $(IMAGE_NAME):$(IMAGE_TAG) .
-
-
-# Push both the final image and the cache image to Amazon ECR
-push:
-	# Authenticate Docker to the Amazon ECR registry
-	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_REPOSITORY_URI)
-	# Tag the image with the final tag (e.g., latest)
-	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(ECR_REPOSITORY_URI):$(IMAGE_TAG)
-	# Tag the image with the cache tag
-	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(ECR_REPOSITORY_URI):$(CACHE_TAG)
-	# Push the final image
-	docker push $(ECR_REPOSITORY_URI):$(IMAGE_TAG)
-	# Push the cache image (so it can be reused in future builds)
-	docker push $(ECR_REPOSITORY_URI):$(CACHE_TAG)
+	--tag $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
+	--push \
+	--provenance=false \
+	.
 
 # Run Docker container locally for testing (development mode)
 run:
